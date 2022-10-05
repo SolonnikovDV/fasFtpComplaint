@@ -55,7 +55,7 @@ def get_ftp_data_list():
                     # returns only complaint with '.zip' file extension
                     file_part = file.split('complaint_')
                     # temporary measure to fast start: return date period from YYYY==2020 to YYYY==2029
-                    # files we are needed are always split for two parts with '.split('complaint_')'
+                    # files we are needed are always splits for two parts with '.split('complaint_')'
                     if len(file_part) == 2:
                         if '202' in str(f'complaint_{file_part[1]}'):
                             # filling the '.csv_files' with list of files to download, 1st row starts with id=793
@@ -174,3 +174,7 @@ download_data()
 
 if __name__ == '__main__':
     print('')
+    # get_ftp_data_list()
+    # diff_list()
+    # # TODO run download at scheduler in airflow
+    # download_data()

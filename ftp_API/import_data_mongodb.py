@@ -43,6 +43,8 @@ def collection_filter():
     # remove null value
     tab_name.find({'customer': {'$ne': 'null'}})
     print('Documents with null value of "customer" field has been removed')
+    # sort collection by date
+    tab_name.find().sort('acceptDate', pymongo.ASCENDING)
 
 
 def drop_data():
@@ -55,4 +57,5 @@ collection_filter()
 
 
 if __name__ == '__main__':
-    print('')
+    print('Importing data')
+    # data_import()

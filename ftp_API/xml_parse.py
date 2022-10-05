@@ -1,4 +1,3 @@
-from datetime import datetime
 from bs4 import BeautifulSoup  # type: ignore
 import os
 # local import
