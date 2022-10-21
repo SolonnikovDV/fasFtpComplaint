@@ -1,19 +1,24 @@
-import ftplib
-import zipfile
-from datetime import datetime
-import urllib.request
-from contextlib import closing
-import os
 import csv
+import ftplib
+import os
 import shutil
-from pandas.errors import EmptyDataError  # type: ignore
+import urllib.request
+import zipfile
+from contextlib import closing
+from datetime import datetime
+
 import pandas as pd
+from pandas.errors import EmptyDataError  # type: ignore
+# from tqdm import tqdm # do not works in DAG airflow
 
 # local import
 import config as cfg
 
 DATE_TIME = datetime.now().strftime("%d-%m-%Y, %H:%M:%S")
-PROJECT_PATH = cfg.PROJECT_PATH
+# PROJECT_PATH = cfg.PROJECT_PATH
+
+# path for DAG in airflow container
+PROJECT_PATH = '/opt/airflow/dags/'
 
 '''
 # get_ftp_data_list() connecting to FTP, getting list of csv_files files adn creating 'to_download_list.csv_files', return nothing;
@@ -31,8 +36,6 @@ The order to run:
 
 
 def get_ftp_data_list():
-    # declare dict for '.xml' files with complaints
-    complaint_files_dict = {}
     try:
         # connecting tp FTP server 'zakupki.gov.ru'
         # server name: 'ftp.zakupki.gov.ru', user: 'free', password: 'free'
@@ -44,7 +47,7 @@ def get_ftp_data_list():
             files = ftp.nlst(f'fcs_fas/complaint/')
 
             # save list of files for download to 'to_download_list.csv_files' file
-            with open(f'{PROJECT_PATH}ftp_files/csv_files/to_download_list.csv_files',
+            with open(f'{PROJECT_PATH}ftp_files/csv/to_download_list.csv',
                       'w',
                       encoding='utf-8',
                       newline='') as csv_file:
@@ -73,16 +76,16 @@ def diff_list():
     global df
     # check 'downloaded_files.csv_files' for empty
     try:
-        df = pd.read_csv(f'{PROJECT_PATH}ftp_files/csv_files/downloaded_files.csv_files')
+        df = pd.read_csv(f'{PROJECT_PATH}ftp_files/csv/downloaded_files.csv')
         print('Downloaded_files is not empty')
         # compare 'to_download_list.csv_files' with 'downloaded_list.csv_files' and get diff
-        with open(f'{PROJECT_PATH}ftp_files/csv_files/downloaded_files.csv_files', 'r') as f1, open(
-                f'{PROJECT_PATH}ftp_files/csv_files/to_download_list.csv_files', 'r') as f2:
+        with open(f'{PROJECT_PATH}ftp_files/csv/downloaded_files.csv', 'r') as f1, open(
+                f'{PROJECT_PATH}ftp_files/csv/to_download_list.csv', 'r') as f2:
             print('Calculate the diff')
             downloaded_files = f1.readlines()
             to_download_list = f2.readlines()
         # write diff to 'diff_list.csv_files'
-        with open(f'{PROJECT_PATH}ftp_files/csv_files/diff_list.csv_files', 'w') as out_file:
+        with open(f'{PROJECT_PATH}ftp_files/csv/diff_list.csv', 'w') as out_file:
             count = 0
             for line in to_download_list:
                 if line not in downloaded_files:
@@ -91,12 +94,12 @@ def diff_list():
                     if count > 0:
                         print(f'Added next files:\n{line}')
     except EmptyDataError as e:
-        print(f'EmptyDataError exception in "downloaded_files.csv_files" : {e}')
-        print('"downloaded_files.csv_files" is empty')
+        print(f'EmptyDataError exception in "downloaded_files.csv" : {e}')
+        print('"downloaded_files.csv" is empty')
     finally:
         # copy 'to_download_list.csv_files' 'as downloaded_files.csv_files'
-        to_download_list = f'{PROJECT_PATH}ftp_files/csv_files/to_download_list.csv_files'
-        downloaded_files = f'{PROJECT_PATH}ftp_files/csv_files/downloaded_files.csv_files'
+        to_download_list = f'{PROJECT_PATH}ftp_files/csv/to_download_list.csv'
+        downloaded_files = f'{PROJECT_PATH}ftp_files/csv/downloaded_files.csv'
         shutil.copy(to_download_list, downloaded_files)
 
 
@@ -105,7 +108,7 @@ def get_download_list():
     # check 'diff_list.csv_files' for empty
     try:
         # if diff is not empty then return diff and save result in a dictionary
-        diff_list = pd.read_csv(f'{PROJECT_PATH}ftp_files/csv_files/diff_list.csv_files')
+        diff_list = pd.read_csv(f'{PROJECT_PATH}ftp_files/csv/diff_list.csv')
         diff_list_to_dict = dict(zip(list(diff_list['id']), list(diff_list['zip_file_name'])))
         print(f'Diff_list is not empty. Returned Diff_list')
         return diff_list_to_dict
@@ -114,41 +117,35 @@ def get_download_list():
         print(f'Diff_list is empty: EmptyDataError exception {e}\nReturned Downloaded_files')
     finally:
         # if diff is empty return downloaded files list and save result in a dictionary
-        downloaded_list = pd.read_csv(f'{PROJECT_PATH}ftp_files/csv_files/downloaded_files.csv_files')
+        downloaded_list = pd.read_csv(f'{PROJECT_PATH}ftp_files/csv/downloaded_files.csv')
+        downloaded_list_to_dict = dict(zip(list(downloaded_list['id']), list(downloaded_list['zip_file_name'])))
         downloaded_list_to_dict = dict(zip(list(downloaded_list['id']), list(downloaded_list['zip_file_name'])))
         return downloaded_list_to_dict
 
 
 # func download data from FTP with download list
 def download_data():
-    count = 0
     data_list = get_download_list()
     # download all .zip from data_list
-    for key in data_list.keys():
+    # for key, counter in tqdm(data_list.items()): # shows download progress bar into console, works only in python
+    for key in data_list.keys(): # works in apache-airflow
         # get names of files for download
         xml_zip_file = data_list.get(key)
         # downloading file from FTP
-        with closing(urllib.request.urlopen(f'ftp://free:free@ftp.zakupki.gov.ru/fcs_fas/complaint/{xml_zip_file}')) as ftp_file:
+        with closing(urllib.request.urlopen(
+                f'ftp://free:free@ftp.zakupki.gov.ru/fcs_fas/complaint/{xml_zip_file}')) as ftp_file:
             with open(f'{PROJECT_PATH}ftp_files/zip/{xml_zip_file}', 'wb') as local_file:
                 shutil.copyfileobj(ftp_file, local_file)
                 print(f'Download --> {ftp_file}')
-        count += 1
-        print(f'>>INFO  {DATE_TIME}: Total files downloaded ZIP files: {count}')
-        # # ubziping files
+        # unziping files
         unzip_file(xml_zip_file)
-
-    # # download test and delete all no .xml files in a folder 'parent_dir'
-    # xml_zip_file = data_list.get(793)
-    # with closing(urllib.request.urlopen(f'ftp://free:free@ftp.zakupki.gov.ru/fcs_fas/complaint/{xml_zip_file}')) as ftp_file:
-    #     with open(f'{PROJECT_PATH}ftp_files/zip/{xml_zip_file}', 'wb') as local_file:
-    #         shutil.copyfileobj(ftp_file, local_file)
 
 
 # fun calling in 'download_data()'
 def unzip_file(zip_file: str):
     with zipfile.ZipFile(f'{PROJECT_PATH}ftp_files/zip/{zip_file}', 'r') as zip_ref:
         zip_ref.extractall(f'{PROJECT_PATH}ftp_files/xml/')
-    # deleting no .xml files from folder
+    # deleting no.xml files from folder
     delete_file()
 
 
@@ -166,15 +163,9 @@ def delete_file():
         print(e)
 
 
-get_ftp_data_list()
-diff_list()
-# TODO run download at scheduler in airflow
-download_data()
-
+# get_ftp_data_list()
+# diff_list()
+# download_data()
 
 if __name__ == '__main__':
     print('')
-    # get_ftp_data_list()
-    # diff_list()
-    # # TODO run download at scheduler in airflow
-    # download_data()

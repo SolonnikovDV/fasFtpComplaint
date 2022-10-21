@@ -1,5 +1,7 @@
-from bs4 import BeautifulSoup  # type: ignore
 import os
+
+from bs4 import BeautifulSoup  # type: ignore
+
 # local import
 import config as cfg
 

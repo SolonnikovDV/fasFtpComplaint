@@ -1,29 +1,44 @@
-from airflow.example_dags.example_bash_operator import dag
-from airflow.models.baseoperator import chain
-import pendulum
-from airflow.operators.empty import EmptyOperator
+from datetime import datetime
 
-'''
-optimize period for schedule is @monthly
-in a project for thr demonstration were used schedule=@daily 
-'''
+from airflow.models import DAG
+from airflow.operators.python import PythonOperator
 
+# local import
+from ftp_API.ftp_get_data import get_ftp_data_list, diff_list, download_data
+# from ftp_API.import_data_mongodb import data_import, collection_filter
 
-# create download dag
-@dag('download_data_dag', start_date=pendulum.datetime(2022, 10, 28, tz='UTC'), schedule='@daily', catchup=False)
-def download_dag():
-    return EmptyOperator(task_id='ftp_get_data')
+with DAG(
+    dag_id='download_ftp_fas',
+    schedule_interval='@monthly',
+    start_date=datetime(2022, 10, 18),
+    catchup=False,
+) as dag:
 
+    task_get_ftp_data_list = PythonOperator(
+        task_id='get_ftp_data_list',
+        python_callable=get_ftp_data_list,
+    )
 
-# create data importing dag
-@dag('import_data_to_db', start_date=pendulum.datetime(2021, 10, 28, tz='UTC'), schedule='@daily', catchup=False)
-def import_data_dag():
-    return EmptyOperator(task_id='import_data_mongodb')
+    task_diff_list = PythonOperator(
+        task_id='diff_list',
+        python_callable=diff_list,
+    )
 
+    task_download_data = PythonOperator(
+        task_id='download_data',
+        python_callable=download_data,
+    )
 
-# init dags
-download_dag = download_dag()
-import_data_dag = import_data_dag()
+    # task_data_import = PythonOperator(
+    #     task_id='data_import',
+    #     python_callable=data_import,
+    # )
+    #
+    # task_collection_filter = PythonOperator(
+    #     task_id='collection_filter',
+    #     python_callable=collection_filter,
+    # )
 
-# run dags chain
-chain(download_dag, import_data_dag)
+# task lunch order
+task_get_ftp_data_list >> task_diff_list >> task_download_data\
+# >> task_data_import >> task_collection_filter

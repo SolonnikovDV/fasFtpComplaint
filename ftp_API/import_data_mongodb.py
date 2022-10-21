@@ -1,11 +1,15 @@
 import glob
-import pymongo
-from xml_parse import parse_xml, get_file_list  # type: ignore
-import PySimpleGUI as sg
-#local import
-import config as cfg
 
-PROJECT_PATH = cfg.PROJECT_PATH
+import PySimpleGUI as sg # do not works in DAG airflow
+import pymongo
+
+from xml_parse import parse_xml, get_file_list  # type: ignore
+
+# local import
+# import config as cfg
+
+# PROJECT_PATH = cfg.PROJECT_PATH
+PROJECT_PATH = '/opt/airflow/dags/'
 
 
 def connect_to_mongo():
@@ -24,6 +28,9 @@ def data_import():
     # init local metrics for console log out
     total = len(glob.glob(f'{PROJECT_PATH}ftp_files/xml/*'))
     # inserting parsed .xml to db
+
+    # part with progress bar, works only in python
+    # <editor-fold desc="Download with progress bar">
     for i, xml_file in enumerate(_list):
         # show download progress bar
         sg.one_line_progress_meter('Download progress',
@@ -35,6 +42,14 @@ def data_import():
                                    key=xml_file)
         dict_data = parse_xml(f'{PROJECT_PATH}ftp_files/xml/{xml_file}')
         tab_name.insert_one(dict_data)
+    # </editor-fold>
+
+    # part without progress bar for apache-airflow
+    # <editor-fold desc="Download for apache-airflow">
+    # for xml_file in _list:
+    #     dict_data = parse_xml(f'{PROJECT_PATH}ftp_files/xml/{xml_file}')
+    #     tab_name.insert_one(dict_data)
+    # </editor-fold>
     print(f'Inserted {total} .xml documents.')
 
 
@@ -52,10 +67,11 @@ def drop_data():
     tab_name.delete_many({})
 
 
-# data_import()
-collection_filter()
+data_import()
+
+# optional using func, in the demo project all filters were added into UI MongoDb Compass
+# collection_filter()
 
 
 if __name__ == '__main__':
     print('Importing data')
-    # data_import()
