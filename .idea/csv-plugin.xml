@@ -17,6 +17,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="/ftp_files/csv/monitoring.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="/ftp_files/csv/to_download_list.csv">
           <value>
             <Attribute>

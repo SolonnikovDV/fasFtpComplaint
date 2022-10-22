@@ -9,16 +9,16 @@ from datetime import datetime
 
 import pandas as pd
 from pandas.errors import EmptyDataError  # type: ignore
-# from tqdm import tqdm # do not works in DAG airflow
+from tqdm import tqdm # do not works in DAG airflow
 
 # local import
 import config as cfg
 
 DATE_TIME = datetime.now().strftime("%d-%m-%Y, %H:%M:%S")
-# PROJECT_PATH = cfg.PROJECT_PATH
+PROJECT_PATH = cfg.PROJECT_PATH
 
 # path for DAG in airflow container
-PROJECT_PATH = '/opt/airflow/dags/'
+# PROJECT_PATH = '/Users/dmitrysolonnikov/airflow-local/dags/'
 
 '''
 # get_ftp_data_list() connecting to FTP, getting list of csv_files files adn creating 'to_download_list.csv_files', return nothing;
@@ -127,8 +127,8 @@ def get_download_list():
 def download_data():
     data_list = get_download_list()
     # download all .zip from data_list
-    # for key, counter in tqdm(data_list.items()): # shows download progress bar into console, works only in python
-    for key in data_list.keys(): # works in apache-airflow
+    for key, counter in tqdm(data_list.items()): # shows download progress bar into console, works only in python
+    # for key in data_list.keys(): # works in apache-airflow
         # get names of files for download
         xml_zip_file = data_list.get(key)
         # downloading file from FTP
@@ -136,9 +136,10 @@ def download_data():
                 f'ftp://free:free@ftp.zakupki.gov.ru/fcs_fas/complaint/{xml_zip_file}')) as ftp_file:
             with open(f'{PROJECT_PATH}ftp_files/zip/{xml_zip_file}', 'wb') as local_file:
                 shutil.copyfileobj(ftp_file, local_file)
-                print(f'Download --> {ftp_file}')
+                # print(f'Download --> {ftp_file}')
         # unziping files
         unzip_file(xml_zip_file)
+        print('All data were download')
 
 
 # fun calling in 'download_data()'
@@ -163,9 +164,9 @@ def delete_file():
         print(e)
 
 
-# get_ftp_data_list()
-# diff_list()
-# download_data()
+get_ftp_data_list()
+diff_list()
+download_data()
 
 if __name__ == '__main__':
     print('')
