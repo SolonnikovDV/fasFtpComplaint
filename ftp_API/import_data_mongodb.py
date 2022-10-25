@@ -1,11 +1,7 @@
 import glob
-
-import PySimpleGUI as sg # do not works in DAG airflow
 import pymongo
-
 from xml_parse import parse_xml, get_file_list  # type: ignore
 from alive_progress import alive_bar
-import time
 
 import pandas as pd
 from pymongo.errors import AutoReconnect
@@ -13,8 +9,8 @@ from pymongo.errors import AutoReconnect
 # local import
 import config as cfg
 
-PROJECT_PATH = cfg.PROJECT_PATH
-# PROJECT_PATH = '/Users/dmitrysolonnikov/airflow-local/dags/'
+# PROJECT_PATH = cfg.PROJECT_PATH
+PROJECT_PATH = '/airflow-local/dags/'
 
 
 def connect_to_mongo():
@@ -35,21 +31,21 @@ def data_import():
         total = len(glob.glob(f'{PROJECT_PATH}ftp_files/xml/*'))
         # inserting parsed .xml to db
 
-        # part with progress bar, works only in python
+        # part with progress bar, do not works in DAG airflow , comment when using in DAG
         # <editor-fold desc="Download with progress bar">
         with alive_bar(len(_list), force_tty=True, title=f'Importing...', bar='blocks', ) as bar:
             for i, xml_file in enumerate(_list):
                 dict_data = parse_xml(f'{PROJECT_PATH}ftp_files/xml/{xml_file}')
                 tab_name.insert_one(dict_data)
                 bar()
-    # </editor-fold>
+        # </editor-fold>
 
-    # part without progress bar for apache-airflow
-    # <editor-fold desc="Download for apache-airflow">
-    # for xml_file in _list:
-    #     dict_data = parse_xml(f'{PROJECT_PATH}ftp_files/xml/{xml_file}')
-    #     tab_name.insert_one(dict_data)
-    # </editor-fold>
+        # part without progress bar for apache-airflow
+        # <editor-fold desc="Download for apache-airflow">
+        # for xml_file in _list:
+        #     dict_data = parse_xml(f'{PROJECT_PATH}ftp_files/xml/{xml_file}')
+        #     tab_name.insert_one(dict_data)
+        # </editor-fold>
 
         print(f'Inserted {total} .xml documents.')
     except AutoReconnect as e:

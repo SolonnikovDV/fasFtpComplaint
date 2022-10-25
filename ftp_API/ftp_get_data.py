@@ -9,16 +9,16 @@ from datetime import datetime
 
 import pandas as pd
 from pandas.errors import EmptyDataError  # type: ignore
-from tqdm import tqdm # do not works in DAG airflow
+# from tqdm import tqdm # do not works in DAG airflow , comment when using in DAG
 
 # local import
 import config as cfg
 
 DATE_TIME = datetime.now().strftime("%d-%m-%Y, %H:%M:%S")
-PROJECT_PATH = cfg.PROJECT_PATH
+# PROJECT_PATH = cfg.PROJECT_PATH
 
 # path for DAG in airflow container
-# PROJECT_PATH = '/Users/dmitrysolonnikov/airflow-local/dags/'
+PROJECT_PATH = '/opt/airflow/dags/'
 
 '''
 # get_ftp_data_list() connecting to FTP, getting list of csv_files files adn creating 'to_download_list.csv_files', return nothing;
@@ -118,7 +118,7 @@ def get_download_list():
     finally:
         # if diff is empty return downloaded files list and save result in a dictionary
         downloaded_list = pd.read_csv(f'{PROJECT_PATH}ftp_files/csv/downloaded_files.csv')
-        downloaded_list_to_dict = dict(zip(list(downloaded_list['id']), list(downloaded_list['zip_file_name'])))
+        # downloaded_list_to_dict = dict(zip(list(downloaded_list['id']), list(downloaded_list['zip_file_name'])))
         downloaded_list_to_dict = dict(zip(list(downloaded_list['id']), list(downloaded_list['zip_file_name'])))
         return downloaded_list_to_dict
 
@@ -127,8 +127,8 @@ def get_download_list():
 def download_data():
     data_list = get_download_list()
     # download all .zip from data_list
-    for key, counter in tqdm(data_list.items()): # shows download progress bar into console, works only in python
-    # for key in data_list.keys(): # works in apache-airflow
+    # for key, counter in tqdm(data_list.items()): # shows download progress bar into console, do not works in DAG airflow , comment when using in DAG
+    for key in data_list.keys(): # works in apache-airflow
         # get names of files for download
         xml_zip_file = data_list.get(key)
         # downloading file from FTP
@@ -164,9 +164,8 @@ def delete_file():
         print(e)
 
 
-get_ftp_data_list()
-diff_list()
-download_data()
-
 if __name__ == '__main__':
     print('')
+    # get_ftp_data_list()
+    # diff_list()
+    # download_data()
